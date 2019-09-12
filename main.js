@@ -3,7 +3,7 @@ enchant();
 const cell_size = 50;
 const y_start = 50;
 const x_start = 150;
-const time_max = 1;
+const time_max = 60;
 const font = '30px イカモドキ';
 
 var Board = Class.create(Sprite, {
