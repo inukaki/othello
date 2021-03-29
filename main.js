@@ -3,7 +3,8 @@ enchant();
 const cell_size = 50;
 const y_start = 50;
 const x_start = 150;
-const time_max = 10;
+const time_max = 30;
+const cpu_waittime = 1;
 const font = '30px イカモドキ';
 
 var Board = Class.create(Sprite, {
@@ -287,9 +288,37 @@ function Random() {
     }
   }
 }
+function Machine() {
+  var value_max = 0;
+  for (var i = 0; i < 8; i++)
+    for (var j = 0; j < 8; j++)
+      if (stone[i][j] === 3){
+        if(value[i][j] >= value_max){
+          if(value[i][j] > value_max){
+            value_max = value[i][j];
+            can_put_count = 0;
+          }
+          can_put_count++;
+        }
+      }
+  var put_place = Math.floor(Math.random() * can_put_count);
+
+  label: for (var y = 0; y < 8; y++) {
+    for (var x = 0; x < 8; x++) {
+      if (stone[y][x] === 3 && value[y][x] === value_max) {
+        if (put_place-- === 0) {
+          Turn(y, x);
+          Prepare();
+          can_put_count = 0;
+          break label;
+        }
+      }
+    }
+  }
+}
 window.onload = function () {
   core = new Core(900, 500);
-  core.preload("board.png", "start.png", "result_background.png");
+  core.preload("board.png", "one_person.png","two_person.png", "result_background.png","title.png");
   core.fps = 30;
   core.onload = function () {
     core.replaceScene(StartScene());
@@ -310,8 +339,19 @@ function GameScene() {
     [0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0]
   ];
+  value = [
+    [5, 1, 4, 4, 4, 4, 1, 5],
+    [1, 1, 2, 2, 2, 2, 1, 1],
+    [4, 2, 3, 3, 3, 3, 2, 4],
+    [4, 2, 3, 0, 0, 3, 2, 4],
+    [4, 2, 3, 0, 0, 3, 2, 4],
+    [4, 2, 3, 3, 3, 3, 2, 4],
+    [1, 1, 2, 2, 2, 2, 1, 1],
+    [5, 1, 4, 4, 4, 4, 1, 5]
+  ];
   can_put_count = 0
   player = ['シロ', 'クロ'];
+  if(mode === true) player = ['CPU', 'クロ'];
   cannotput_flag = 0;
   turn = 2;
   turnLabel = new Label(`ターン　${player[turn - 1]}`);
@@ -333,11 +373,14 @@ function GameScene() {
     if (frame === 30) {
       frame = 0;
       timeLabel.text = (time);
-      Prepare();
+      // Prepare();←何のためかわからない。過去の自分に聞きたい。
       gamescene.removeChild(timeLabel);
       gamescene.addChild(timeLabel);
       if (time === 0) Random();
       time--;
+      if(mode === true && time === time_max - cpu_waittime && turn === 1){
+        Machine();
+      }
     }
   });
   black_count = 0;
@@ -377,13 +420,29 @@ function GameScene() {
 }
 
 function StartScene() {
+  mode = false;
   startscene = new Scene();
-  var button = new Sprite(150, 50);
-  button.image = core.assets['start.png'];
-  button.x = 400;
-  button.y = 220;
-  startscene.addChild(button);
-  button.addEventListener("touchstart", function (e) {
+  startscene.backgroundColor = "#00ced1";
+  var button1 = new Sprite(150, 50);
+  button1.image = core.assets['one_person.png'];
+  button1.x = 375;
+  button1.y = 350;
+  var button2 = new Sprite(150, 50);
+  button2.image = core.assets['two_person.png'];
+  button2.x = 375;
+  button2.y = 420;
+  var title = new Sprite(820, 275);
+  title.image = core.assets['title.png'];
+  title.x = 40;
+  title.y = 40;
+  startscene.addChild(button1);
+  startscene.addChild(button2);
+  startscene.addChild(title);
+  button1.addEventListener("touchstart", function (e) {
+    mode = true;
+    core.replaceScene(GameScene());
+  });
+  button2.addEventListener("touchstart", function (e) {
     core.replaceScene(GameScene());
   });
   return startscene;
