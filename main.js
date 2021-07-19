@@ -3,7 +3,7 @@ enchant();
 const cell_size = 50;
 const y_start = 50;
 const x_start = 150;
-const time_max = 2;
+const time_max = 30;
 const cpu_waittime = 2;
 const search_depth = 1;
 var cpu_varsion = 2;
