@@ -6,7 +6,7 @@ const x_start = 150;
 const time_max = 30;
 const cpu_waittime = 2;
 const search_depth = 1;
-var cpu_varsion = 2;
+var cpu_varsion = 0;
 const font = '30px 游ゴシック';
 
 var Board = Class.create(Sprite, {
