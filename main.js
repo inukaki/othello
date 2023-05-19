@@ -5,9 +5,10 @@ const y_start = 50;
 const x_start = 150;
 const time_max = 30;
 const cpu_waittime = 2;
-const search_depth = 1;
-var cpu_varsion = 0;
+const search_depth = 6; //偶数じゃないとバグる？<-そんなことないかも。なんでもバグる
+var cpu_varsion = 2;
 const font = '30px 游ゴシック';
+const inf = 10000000;
 
 var Board = Class.create(Sprite, {
   initialize: function(y, x) {
@@ -147,7 +148,10 @@ function Value(stone, turn) { //盤面の価値を返す
   var value_return = 0;
   for (var i = 0; i < 8; i++) {
     for (var j = 0; j < 8; j++) {
-      if (stone[i][j] === turn) value_return += value[cpu_varsion][i][j];
+      if (stone[i][j] === turn) {
+        if (Count(stone) <= 40) value_return += value[cpu_varsion][i][j];
+        else value_return += last_value[cpu_varsion][i][j];
+      }
     }
   }
   return value_return;
@@ -390,45 +394,53 @@ function Random() { //ランダムに石をおく
 var value_max_x;
 var value_max_y;
 
-function Search(received_stone, count, turn) {
-  var value_max = -100000;
-  if (count > 0) {
-    if ((search_depth * 2 - count) % 2 == 1) {
-      Put_Max_Value(received_stone, turn);
-      return Search(received_stone, count - 1, 3 - turn);
-    } else {
-      console.log(1);
-      for (var i = 0; i < 8; i++) {
-        for (var j = 0; j < 8; j++) {
-          if (received_stone[i][j] === 3) {
-            console.log(2);
-            //received_stoneをstoneにコピー
-            var stone = [];
-            for (var k = 0; k < 8; k++) {
-              stone[k] = [];
-            }
-            for (var k = 0; k < 8; k++) {
-              for (var l = 0; l < 8; l++) {
-                stone[k][l] = received_stone[k][l];
-              }
-            }
+function Search(received_stone, depth, turn, passed) {
+  //底まで探索したら評価関数を実行
+  if (depth === 0) return Value(received_stone, turn);
 
-            Put(stone, i, j, turn);
-            Prepare(stone);
-            var value = Search(stone, count - 1, 3 - turn);
+  //最大の価値を無限小に設定
+  var max_value = -inf;
+
+  //すべてのマスを探索
+  for (var i = 0; i < 8; i++) {
+    for (var j = 0; j < 8; j++) {
+      //もし石をおける場所なら
+      if (received_stone[i][j] === 3) {
+
+        //received_stoneをstoneにコピー
+        var stone_copy = [];
+        for (var k = 0; k < 8; k++) {
+          stone_copy[k] = [];
+        }
+        for (var k = 0; k < 8; k++) {
+          for (var l = 0; l < 8; l++) {
+            stone_copy[k][l] = received_stone[k][l];
+          }
+        }
+
+        Put(stone_copy, i, j, turn); //石を置いたとする
+        Prepare(stone_copy); //stoneを整える
+        var value = Search(stone_copy, depth - 1, 3 - turn, false);
+        value = -value; //negamax法
+        if (max_value < value) {
+          max_value = value;
+
+          //最上位ノードだったら石を置く場所を保存
+          if (depth === search_depth) {
             console.log(value);
-            if (value_max < value) {
-              value_max = value;
-              value_max_x = j;
-              value_max_y = i;
-            }
+            console.log(value_max_y, value_max_x);
+            value_max_x = j;
+            value_max_y = i;
           }
         }
       }
-      return value_max;
     }
-  } else
-    return Value(received_stone, turn) - Value(received_stone, 3 - turn); //自分の価値-相手の価値
+  }
+  if (max_value === -inf) {
+    if (passed) return Value(received_stone, turn);
+    return (-Search(received_stone, depth, 3 - turn, true))
+  }
+  return max_value;
 }
 
 function Machine(cpu_varsion) { //CPUが石をおく。
@@ -491,7 +503,8 @@ function Machine(cpu_varsion) { //CPUが石をおく。
 
   if (cpu_varsion === 2) { //盤面価値変動ありに加え、先読み
 
-    console.log(Search(stone, 2 * search_depth, turn));
+    console.log(Search(stone, search_depth, turn, false));
+    // console.log(Search(stone, 2 * search_depth, turn));
     console.log(value_max_y, value_max_x);
     Put(stone, value_max_y, value_max_x, turn);
     Turn_Change();
@@ -505,7 +518,7 @@ function Machine(cpu_varsion) { //CPUが石をおく。
 
 window.onload = function() {
   core = new Core(900, 500);
-  core.preload("board.png", "one_person.png", "two_person.png", "result_background.png", "title.png", "ガンダム.png");
+  core.preload("close.png", "board.png", "one_person.png", "two_person.png", "result_background.png", "setting_background.png", "title.png", "setting.png");
   core.fps = 30;
   core.onload = function() {
     core.replaceScene(StartScene());
@@ -621,7 +634,7 @@ function GameScene() {
       // Prepare();←何のためかわからない。過去の自分に聞きたい。
       gamescene.removeChild(timeLabel);
       gamescene.addChild(timeLabel);
-      if (time === 0) Random();
+      if (time === 0) /*Random();*/ Machine(1);
       time--;
       if (mode === true && time === time_max - cpu_waittime && turn === 1) {
         Machine(cpu_varsion);
@@ -685,14 +698,14 @@ function StartScene() {
   title.image = core.assets['title.png'];
   title.x = 40;
   title.y = 40;
-  var robot = new Sprite(441, 328);
-  robot.image = core.assets['ガンダム.png'];
-  robot.x = 600;
-  robot.y = 350;
+  var setting = new Sprite(50, 50);
+  setting.image = core.assets['setting.png'];
+  setting.x = 10;
+  setting.y = 10;
   startscene.addChild(button1);
   startscene.addChild(button2);
   startscene.addChild(title);
-  // startscene.addChild(robot);
+  startscene.addChild(setting);
   button1.addEventListener("touchstart", function(e) {
     mode = true;
     core.replaceScene(GameScene());
@@ -700,7 +713,29 @@ function StartScene() {
   button2.addEventListener("touchstart", function(e) {
     core.replaceScene(GameScene());
   });
+  setting.addEventListener("touchstart", function(e) {
+    core.pushScene(SettingScene());
+  });
   return startscene;
+}
+
+function SettingScene() {
+  settingscene = new Scene();
+  var background = new Sprite(600, 400);
+  background.image = core.assets["setting_background.png"];
+  background.x = 150;
+  background.y = 50;
+  var close = new Sprite(50, 50);
+  close.image = core.assets["close.png"];
+  close.x = 150;
+  close.y = 50;
+  settingscene.addChild(background);
+  settingscene.addChild(close);
+  close.addEventListener("touchstart", function(e) {
+    core.replaceScene(StartScene());
+  });
+
+  return settingscene;
 }
 
 function ResultScene() {
