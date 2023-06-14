@@ -4,8 +4,8 @@ const cell_size = 50;
 const y_start = 50;
 const x_start = 150;
 const time_max = 30;
-const cpu_waittime = 2;
-const search_depth = 6; //偶数じゃないとバグる？<-そんなことないかも。なんでもバグる
+const cpu_waittime = 2; //time_max-cpu_waittime>=0が必要
+const search_depth = 4; //偶数じゃないとバグる？
 var cpu_varsion = 2;
 const font = '30px 游ゴシック';
 const inf = 10000000;
@@ -142,15 +142,21 @@ function Count(stone) { //盤面の石の数を数える
   }
   return count;
 }
-
-function Value(stone, turn) { //盤面の価値を返す
+f=0;
+function Value(stone_copy, turn) { //盤面の価値を返す
 
   var value_return = 0;
   for (var i = 0; i < 8; i++) {
     for (var j = 0; j < 8; j++) {
-      if (stone[i][j] === turn) {
-        if (Count(stone) <= 40) value_return += value[cpu_varsion][i][j];
-        else value_return += last_value[cpu_varsion][i][j];
+      if (stone_copy[i][j] === turn) {
+        if (Count(stone_copy) <= 40) value_return += value[cpu_varsion][i][j];
+        else {
+          value_return += last_value[cpu_varsion][i][j];
+          if(f===0){
+            console.log("last");
+            f=1;
+          }
+        }
       }
     }
   }
@@ -187,7 +193,7 @@ function Put_Max_Value(stone, turn) {
     for (var j = 0; j < 8; j++) {
       if (stone[i][j] === 3) {
         var value = Put_Value(stone, i, j, turn);
-        console.log(value);
+        // console.log(value);
         can_put_flag = 1;
         if (value_max < value) {
           value_max = value;
@@ -198,7 +204,7 @@ function Put_Max_Value(stone, turn) {
     }
   }
   if (can_put_flag == 0) return 0;
-  console.log(y, x);
+  // console.log(y, x);
   Put(stone, y, x, turn);
   Prepare(stone);
   return value_max;
@@ -427,8 +433,8 @@ function Search(received_stone, depth, turn, passed) {
 
           //最上位ノードだったら石を置く場所を保存
           if (depth === search_depth) {
-            console.log(value);
-            console.log(value_max_y, value_max_x);
+            // console.log(value);
+            // console.log(value_max_y, value_max_x);
             value_max_x = j;
             value_max_y = i;
           }
@@ -503,9 +509,9 @@ function Machine(cpu_varsion) { //CPUが石をおく。
 
   if (cpu_varsion === 2) { //盤面価値変動ありに加え、先読み
 
-    console.log(Search(stone, search_depth, turn, false));
+    Search(stone, search_depth, turn, false);
     // console.log(Search(stone, 2 * search_depth, turn));
-    console.log(value_max_y, value_max_x);
+    // console.log(value_max_y, value_max_x);
     Put(stone, value_max_y, value_max_x, turn);
     Turn_Change();
     Count_Display();
@@ -552,25 +558,25 @@ function GameScene() {
     ],
 
     [
-      [30, -12, 0, -1, -1, 0, -12, 30],
+      [300, -12, 0, -1, -1, 0, -12, 300],
       [-12, -15, -3, -3, -3, -3, -15, -12],
       [0, -3, 0, -1, -1, 0, -3, 0],
       [-1, -3, -1, -1, -1, -1, -3, -1],
       [-1, -3, -1, -1, -1, -1, -3, -1],
       [0, -3, 0, -1, -1, 0, -3, 0],
       [-12, -15, -3, -3, -3, -3, -15, -12],
-      [30, -12, 0, -1, -1, 0, -12, 30]
+      [300, -12, 0, -1, -1, 0, -12, 300]
     ],
 
     [
-      [30, -5, 0, -1, -1, 0, -5, 30],
+      [300, -5, 0, -1, -1, 0, -5, 300],
       [-5, -10, -3, -3, -3, -3, -10, -5],
       [0, -3, 0, -1, -1, 0, -3, 0],
       [-1, -3, -1, -1, -1, -1, -3, -1],
       [-1, -3, -1, -1, -1, -1, -3, -1],
       [0, -3, 0, -1, -1, 0, -3, 0],
       [-5, -10, -3, -3, -3, -3, -10, -5],
-      [30, -5, 0, -1, -1, 0, -5, 30]
+      [300, -5, 0, -1, -1, 0, -5, 300]
     ]
   ];
   last_value = [
@@ -578,8 +584,8 @@ function GameScene() {
       [5, 1, 4, 4, 4, 4, 1, 5],
       [1, 1, 2, 2, 2, 2, 1, 1],
       [4, 2, 3, 3, 3, 3, 2, 4],
-      [4, 2, 3, 0, 0, 3, 2, 4],
-      [4, 2, 3, 0, 0, 3, 2, 4],
+      [4, 2, 3, 3, 3, 3, 2, 4],
+      [4, 2, 3, 3, 3, 3, 2, 4],
       [4, 2, 3, 3, 3, 3, 2, 4],
       [1, 1, 2, 2, 2, 2, 1, 1],
       [5, 1, 4, 4, 4, 4, 1, 5]
@@ -597,14 +603,14 @@ function GameScene() {
     ],
 
     [
-      [80, 10, 30, 20, 20, 30, 10, 80],
+      [300, 10, 30, 20, 20, 30, 10, 300],
       [10, 5, 10, 10, 10, 10, 5, 10],
       [30, 10, 10, 10, 10, 10, 10, 30],
       [20, 10, 10, 10, 10, 10, 10, 20],
       [20, 10, 10, 10, 10, 10, 10, 20],
       [30, 10, 10, 10, 10, 10, 10, 30],
       [10, 5, 10, 10, 10, 10, 5, 10],
-      [80, 10, 30, 20, 20, 30, 10, 80]
+      [300, 10, 30, 20, 20, 30, 10, 300]
     ]
   ]
   can_put_count = 0
